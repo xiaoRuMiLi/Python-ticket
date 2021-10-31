@@ -41,24 +41,25 @@ class Stock_all_model(Base_model):
 
             price = total/len(nlist)
             # 保留两位小数
-            price = ('%.2f' % price)
+            price = ('%.3f' % price)
             rdict.append(float(price))
         return rdict
-    # 往前取一定天数内股价的均线列表，【1号均线位置， 2号均线位置】
+
+    # 往前取一定天数内股价的均线列表，【10月1号均线位置， 10月2号均线位置】
     # days 取多少天均线，
     # num 取多少天
     def get_avg_price( self, dt, days,num = 30 ):
-        sindex = self.date_col.index( dt ) - num
         eindex = self.date_col.index( dt ) + 1
+        sindex = eindex - num
         rlist = []
         if eindex < sindex or sindex < days:
             return False
-        for i in range(eindex - sindex):
-            datas = self.close_col[sindex + i - days: sindex + i]
+        for i in range(num):
+            datas = self.close_col[sindex + i - days + 1: sindex + i + 1]
             total = sum(datas)
             price = total/len(datas)
             rlist.append(float('%.3f'%price))
-            # print(self.date_col[sindex + i-days],'____',len(datas),'____',self.date_col[sindex + i])
+            # print(self.date_col[sindex + i-days],'____',len(datas),'____','total%.2f'%total,self.date_col[sindex + i])
 
         return rlist
 
@@ -84,12 +85,70 @@ class Stock_all_model(Base_model):
             low_price = low_total/len(low_datas)
 
             rlist.append(  (float('%.3f'%high_price), float('%.3f'%low_price)))
-
-            print(self.date_col[sindex + i-days + 1],'____',(float('%.3f'%high_price), float('%.3f'%low_price)),'____',self.date_col[sindex + i + 1])
+            # print(self.date_col[sindex + i-days + 1],'____',(float('%.3f'%high_price), float('%.3f'%low_price)),'____',self.date_col[sindex + i + 1])
 
         return rlist
 
 
+    # 计算某条均线和收盘价的乖离率，以均线为锚， 例如 均线价格为10元， 股价为11元 相比于均线股价上涨了10百分之，那么则返回10， 如果股价为9 返回-10
+    # days int  几日均线
+    # return tuple 返回一个元祖包含股价与若干条均线的乖离率
+    def get_bias_from_avg_line( self, dt, days=(60,20,10,5), datas = [] ):
+        ndatas = datas
+        if not datas:
+            ndatas = self.datas
+        column = self.column(ndatas)
+        # print(dt)
+        # 取日期列表
+        days_list = column[self.field.index('state_dt')]
+        # 取收盘价列表
+        close_list = column[self.field.index('close')]
+        lis = self.get_avg_line(dt, days, datas = ndatas)
+        close = float(self.close_col[self.date_col.index(dt)])
+        rlist = []
+        for i in lis:
+            avg = i
+            print( avg , close )
+            res = (close / avg - 1) * 100
+            rlist.append('%.3f'%res)
+        return rlist
+    # 根据某个交易日往前倒推并根据因子计算股票价格是否处于横盘阶段吗，
+    # dt 测算的时间
+    # days int 均线时间， 这条均线会被作为是否横盘的判断依据
+    # factor int 因子 该参数表示参数1的均线在该百分比内上下波动属于横盘，超过该幅度则不算横盘
+    # return tuple 返回一个元祖 （平均价格， 和交易日数）
+    def get_balance( self, dt, days, factor = 20):
+        index = self.date_col.index(dt)
+        if index < days:
+            return False
+        base_price = self.get_avg_price( self.date_col[index], days, num = 1)
+        high = base_price[0]
+        low = base_price[0]
+        lis = []
+        i = 0
+        while 1:
+            if index - i < days:
+                break;
+            print(self.date_col[index - i], days)
+            line_prices = self.get_avg_price( self.date_col[index - i], days, num = 1)
+            line_price = line_prices[0]
+            # 如果超过最高价则记录该最高价
+            if line_price > high:
+                high = line_price
+            if line_price < low:
+                low = line_price
+            if (high/low - 1) * 100 > factor:
+                break
+            print(line_price,high,low, (high/low - 1) * 100)
+            lis.append(float(line_price))
+            i += 1
+
+        print(lis)
+        print(type(sum(lis)))
+        if len(lis) > 0:
+            return ('%.3f'%(sum(lis)/len(lis)), len(lis))
+        else:
+            return False
 
 
 
@@ -141,6 +200,7 @@ class Stock_all_model(Base_model):
         return float('%.3f'%val)
 
     # 获取指定的列数据，datas 默认是使用cols
+    #
     def get_col_datas( self, column_key,datas = None):
         ndatas = self.cols
         if isinstance(datas, list):
@@ -157,7 +217,7 @@ class Stock_all_model(Base_model):
         rlist = self.date_col[sindex:eindex]
         return rlist
 
-    # 取一定时间股价累计涨跌幅百分数,从参数dt 往前推days天数,dt这一天的收盘价除以days 天以前的收盘价 减去1 得到涨跌幅 正数代表上涨，负数代表下跌 1代表上涨100%，反之亦然
+    # 取一定时间股价累计涨跌幅百分数,从参数dt 往前推days天数,dt这一天的收盘价除以days 天以前的收盘价 减去1 得到涨跌幅 正数代表上涨，负数代表下跌 100代表上涨100%，反之亦然
     def get_price_total( self, dt, days=10):
         index = int(self.date_col.index(dt))
         if index < days:
@@ -175,9 +235,16 @@ class Stock_all_model(Base_model):
         # print(price_range)
 
     # 取参数1 时间的股票价格趋势，
+    # return dict 其格式如下
+    # {'start_dt': 趋势开始的时间
+    #   'end_dt': 趋势结束的时间
+    #   'days': list 该时间内所有的交易日列表
+    #   'price_range': float 股价在该时间段涨跌幅平均值
+    #   'avg_amplitude': float 股价该时间段振幅平局值,
+    #    'price_total': float 该时间段累计涨跌幅，正数代表上涨百分比，负数代表下跌半分比}
     def get_current_moving( self, dt, factor = (60,50,40,30,20,10,5,3), wrong_time = 2 ):
 
-        start_dt = self.get_price_moving_start( dt, factor )
+        start_dt = self.get_price_moving_start( dt, factor, wrong_time )
         end_dt = dt
         lis = self.get_days_by_two_date(start_dt,dt)
         price_range = self.get_avg_price_range(dt,len(lis))
@@ -195,7 +262,11 @@ class Stock_all_model(Base_model):
 
 
 
-    # 取指定时间以前的所有股票走势
+    # 取指定时间以前的所有股票走势,递归
+    # dt str 日期
+    # factor tuple 因子，取股票的趋势的因子，会从索引0开始逐渐取该值的均线位置和上一天的收盘价比较，如果本次的值
+    # 和上一天该值同样大于或者小于0 ，大于0 计做上涨，小于0计做下跌，表示趋势一致，那么再往前一天取同样的值，直到取到不同的大于或小于0， 则会在wrong——time中计错一次，当错误次数大于或等于参数wrong——time 值则本参数取下一个索引值，重复该动作。
+    # wrong_time int 容许错误次数
     def get_all_price_moving( self,dt, factor = (20,10,5,3,2,1), wrong_time = 1):
         rlist = []
         def fun (dt, factor, wrong_time):
@@ -211,11 +282,21 @@ class Stock_all_model(Base_model):
         # # 倒序列表 函数reversed 返回一个迭代对象，需要list化
         return list(reversed(rlist))
 
-    # 根据股票走势数据寻找符合条件的波(条件中days：5 表示趋势连续天数不得小于5,price_total:10 表示要大于10, trend: 1，RAISE or  -1FALL 0 all)
-    def get_price_raise_wave( self, datas, condition = {'days': 5, 'price_total': 10,'trend': 1}):
-        price_total = condition['price_total']
-        days = condition['days']
-        trend = condition['trend']
+    # 根据股票走势数据寻找符合条件的波，一个完整的波包括一个上升浪和一个下降浪，上升浪累计涨幅大于下跌浪累计跌幅计做上涨波，反之则计做下跌波
+    # (datas: 方法get_all_price_moving 返回的趋势数据，数据中包含了若干上升浪和下跌浪，
+    # days：into  例子 5 表示波中上涨浪和下跌浪连续天数都不得小于5天,数值越大表示上升或者下降时间越长
+    # price_total:into 例如 10 表示上升浪和下跌浪累计涨跌幅都要大于10%,
+    # trend: 1，RAISE or  -1FALL 0 all) 1 返回上升波， -1 返回下跌波
+    # return {
+    # 'type': int  1 代表是一个上涨波， -1 代表下降波,
+    # 'start_dt': 整个波开始的交易日期,
+    # 'peak_dt': 整个波上涨的顶点交易日, 相当于波峰的顶峰日期
+    # 'end_dt': 整个波结束的交易日期,
+    # 'raise_range': 上升浪的累计涨跌幅,
+    # 'fall_range': 下跌浪的累计下跌幅
+
+    def get_price_raise_wave( self, datas, days=5, price_total=10,trend=1):
+
         tup = ()
         if isinstance(datas, list):
             for i in range(len(datas) -1):
@@ -501,13 +582,20 @@ if __name__ == '__main__':
     lis = avg.get_all_price_moving('2021-10-08')
     # print(lis)
     #
-    lis1 = avg.get_price_raise_wave(lis,condition = {'days': 5, 'price_total': 5,'trend': 0})
+    lis1 = avg.get_price_raise_wave(lis,days=5, price_total=5,trend=0)
 
-    print(lis1)
+    # print(lis1)
 
     avg_price_list = avg.get_avg_price('2021-10-08',5,30)
-    print(avg_price_list)
+    # print(avg_price_list)
 
     passageway_list = avg.get_avg_passageway('2021-10-08',5,10)
 
     print(passageway_list)
+
+    biasRangeList = avg.get_bias_from_avg_line('2021-10-08',[60])
+    print(biasRangeList)
+
+    r = avg.get_balance('2021-10-08',60, factor = 5)
+
+    print(r)
