@@ -1,4 +1,4 @@
-﻿
+
 $git add "Stock_all_model.py"  123
 $git commit -m "say any word"
 $git log //显示历史版本
@@ -107,10 +107,26 @@ https://blog.csdn.net/weixin_44394753/article/details/91410463
 
 $ git clone git@github.com:xiaoRuMiLi/jinjie.git
 Cloning into 'gitskills'...
-remote: Counting objects: 3, done.
-remote: Total 3 (delta 0), reused 0 (delta 0), pack-reused 3
-Receiving objects: 100% (3/3), done.
-注意把Git库的地址换成你自己的，然后进入gitskills目录看看，已经有README.md文件了：
-
 
 不同的机器连接到同一个远程仓库都必须要把本地的ssh key 复制到GitHub网站，才能正常clone远程到本地，正常push到远程，本地没有成成国sshkey 的可以用命令生成，已经生成的可以用命令查看,具体操作流程详见https://git-scm.com/book/zh/v2/%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%B8%8A%E7%9A%84-Git-%E7%94%9F%E6%88%90-SSH-%E5%85%AC%E9%92%A5
+
+error: Your local changes to the following files would be overwritten by merge 解决方案
+
+团队其他成员修改了某文件并已提交入库，你在pull之前修改了本地该文件，等你修改完代码再pull时，这时会报错如下错误：
+
+error: Your local changes to the following files would be overwritten by merge
+
+二、解决方案
+根据是否要保存本地修改，有以下两种解决方案
+
+2.1  保留修改
+执行以下三条命令
+
+git stash #封存修改
+git pull origin master
+git stash pop #把修改还原
+
+
+所以，对很多开发人员而言，一打开电脑，马上先git pull，拉取最新的。然后进行常规开发，
+开发完毕之后，在git push之前，还需要使用git pull再拉取一遍。
+如果还有一个新的程序员丙，加入了，怎么办呢？
