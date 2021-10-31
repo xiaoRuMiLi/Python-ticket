@@ -108,7 +108,7 @@ class Stock_all_model(Base_model):
         rlist = []
         for i in lis:
             avg = i
-            print( avg , close )
+            # print( avg , close )
             res = (close / avg - 1) * 100
             rlist.append('%.3f'%res)
         return rlist
@@ -117,7 +117,7 @@ class Stock_all_model(Base_model):
     # days int 均线时间， 这条均线会被作为是否横盘的判断依据
     # factor int 因子 该参数表示参数1的均线在该百分比内上下波动属于横盘，超过该幅度则不算横盘
     # return tuple 返回一个元祖 （平均价格， 和交易日数）
-    def get_balance( self, dt, days, factor = 20):
+    def get_balance( self, dt, days = 60, factor = 5):
         index = self.date_col.index(dt)
         if index < days:
             return False
@@ -129,7 +129,7 @@ class Stock_all_model(Base_model):
         while 1:
             if index - i < days:
                 break;
-            print(self.date_col[index - i], days)
+            # print(self.date_col[index - i], days)
             line_prices = self.get_avg_price( self.date_col[index - i], days, num = 1)
             line_price = line_prices[0]
             # 如果超过最高价则记录该最高价
@@ -139,12 +139,12 @@ class Stock_all_model(Base_model):
                 low = line_price
             if (high/low - 1) * 100 > factor:
                 break
-            print(line_price,high,low, (high/low - 1) * 100)
+            # print(line_price,high,low, (high/low - 1) * 100)
             lis.append(float(line_price))
             i += 1
 
-        print(lis)
-        print(type(sum(lis)))
+        # print(lis)
+        # print(type(sum(lis)))
         if len(lis) > 0:
             return ('%.3f'%(sum(lis)/len(lis)), len(lis))
         else:
@@ -271,7 +271,7 @@ class Stock_all_model(Base_model):
         rlist = []
         def fun (dt, factor, wrong_time):
             res = self.get_current_moving(dt,factor,wrong_time)
-            print(res)
+            # print(res)
             rlist.append(res)
             ndt = res['start_dt']
             if self.date_col.index(ndt) <= int(factor[0]):
@@ -309,7 +309,7 @@ class Stock_all_model(Base_model):
                 # 寻找上升波的逻辑
                 # print(trend == 1 and total >= price_total and current_days >= days and nex_item['days'] >= days and nex_item['price_total'] < 0)
                 if trend == 1 and total >= price_total and current_days >= days and nex_item['days'] >= days and nex_item['price_total'] < 0 and nex_item['price_total']>-total:
-                    print(item)
+                    # print(item)
                     tup = tup + ({
                     'type': trend,
                     'start_dt': item['start_dt'],
@@ -544,7 +544,7 @@ if __name__ == '__main__':
     # data = stock_all.get_data_on_date('002049.SZ','2010-01-14')
     # print(data)
     avg = Stock_all_model(db)
-    avg.get_datas('002049.SZ','2018-05-20','2021-10-09')
+    avg.get_datas('600089.SH','1997-08-18','2021-10-09')
 
     # print( avg.cols )
     '''# ans = self.collect_data(in_code,start_dt,end_dt)
@@ -558,12 +558,16 @@ if __name__ == '__main__':
     #print( avg.get_avg_amplitude('2021-10-08'))
     rlist = []
     for i in range(len(avg.date_col)+30):
+        before = avg.date_col[i - 30 -1]
         item = avg.date_col[i - 30]
-
-        val = avg.get_avg_price_range(item,days=20)
-
-        rlist.append(val)
-    #print(rlist)
+        # val = avg.get_avg_price_range(item,days=20)
+        # rlist.append(val)
+        br = avg.get_balance(before,60, factor = 5)
+        r = avg.get_balance(item,60, factor = 5)
+        if r and br and r[1] < br[1] and br[1] > 60:
+            print(before, '________')
+            print(br)
+    # print(rlist)
 
     resu = avg.get_price_moving_start('2021-10-08',factor = (20,10,5,3,2,1), wrong_time = 1)
 
