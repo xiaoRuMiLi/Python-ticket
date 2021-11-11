@@ -114,41 +114,53 @@ class Stock_all_model(Base_model):
         return rlist
     # 根据某个交易日往前倒推并根据因子计算股票价格是否处于横盘阶段吗，
     # dt 测算的时间
-    # days int 均线时间， 这条均线会被作为是否横盘的判断依据
+    # days int 均线时间， 这条均线会被作为是否横盘的判断依据,同时股价也会作为判断依据，如果其中一个涨跌幅大于参数3设置的值就会返回
     # factor int 因子 该参数表示参数1的均线在该百分比内上下波动属于横盘，超过该幅度则不算横盘
-    # return tuple 返回一个元祖 （平均价格， 和交易日数）
-    def get_balance( self, dt, days = 60, factor = 5):
+    # return tuple 返回一个所有横盘天数组成的日期列表，
+    def get_balance_days( self, dt, days = 60, factor = 5):
         index = self.date_col.index(dt)
         if index < days:
-            return False
+            return []
+        # 初始均线位置
         base_price = self.get_avg_price( self.date_col[index], days, num = 1)
+        # 初始收盘价
+        base_close = float(self.close_col[index])
         high = base_price[0]
         low = base_price[0]
         lis = []
         i = 0
+
         while 1:
             if index - i < days:
                 break;
             # print(self.date_col[index - i], days)
             line_prices = self.get_avg_price( self.date_col[index - i], days, num = 1)
             line_price = line_prices[0]
+            # 该日收盘价
+            close = float(self.close_col[index - i])
             # 如果超过最高价则记录该最高价
             if line_price > high:
                 high = line_price
             if line_price < low:
                 low = line_price
-            if (high/low - 1) * 100 > factor:
+            # 如果均线涨跌幅超过临界值则触发中断
+            if (high/low - 1) * 100 > factor or (high/low - 1) * 100 < -factor:
+                break
+            # 如果股价和标的日期比超过了涨跌幅临界也触发中断
+            # print(close,base_close)
+            # print((close/base_close - 1) * 100)
+            if (close/base_close - 1) * 100 > factor or (close/base_close - 1) * 100 < -factor:
                 break
             # print(line_price,high,low, (high/low - 1) * 100)
-            lis.append(float(line_price))
+            lis.append(self.date_col[index - i])
             i += 1
 
         # print(lis)
         # print(type(sum(lis)))
         if len(lis) > 0:
-            return ('%.3f'%(sum(lis)/len(lis)), len(lis))
+            return lis
         else:
-            return False
+            return []
 
 
 
@@ -221,12 +233,11 @@ class Stock_all_model(Base_model):
     def get_price_total( self, dt, days=10):
         index = int(self.date_col.index(dt))
         if index < days:
-            raise Exception('function get_price_total index must greater than days')
+            raise Exception('function get_price_total index%i must greater than days%i'%(index,days))
         # 多一天要不就会取到比实际days多一天
         before = self.close_col[index-days+1]
 
         current = self.close_col[index]
-
         price_range = (current/before - 1)*100
 
         return float('%.3f'%price_range)
@@ -350,9 +361,13 @@ class Stock_all_model(Base_model):
 
     # 取当前趋势的起点,只取上涨或者下跌趋势
     # 例如当前为下跌趋势那么取到趋势开始的那天
-    # factor 因子， 从因子的第一个开始取平均涨跌幅，如果更dt 趋势一致（上涨或下跌）则继续往前取前一天，直到取到连续出现wrongtime次数的不同趋势，则跳到factor下一个元素继续上述操作
-    def get_price_moving_start( self, dt , factor = (60,50,40,30,20,10,5,3), wrong_time = 2):
-        current = self.get_avg_price_range(dt,factor[0])
+    # factor tuple 因子， 从因子的第一个开始取平均涨跌幅，如果更dt 趋势一致（上涨或下跌）则继续往前取前一天，直到取到连续出现wrongtime次数的不同趋势，则跳到factor下一个元素继续上述操作
+    # wrong_time int 从当前时间往前倒推出现相反趋势的连续次数，当连续出现该次数后则跳转到因子的下一个索引继续，
+    # days int  从单前时间取该参数交易日平均日涨跌幅，如果该涨跌幅大于0则认为该趋势为上涨，则函数会从上涨去倒推交易日，执行factor参数第一个索引的平均涨跌幅
+    # 如果上一个交易日也为正则再往前推一天重付该动作，直到出现相反的平均涨跌幅则会记错加一，直到因子每个索引循环结束，则返回该交易日
+    # return str 趋势出现的第一个交易日
+    def get_price_moving_start( self, dt , factor = (60,50,40,30,20,10,5,3), wrong_time = 2, days=30):
+        current = self.get_avg_price_range(dt,factor[0],days)
         # print('current is %s'%current)
         # 上涨或者下跌
         features = 1 if float(current) > 0 else -1
@@ -544,7 +559,7 @@ if __name__ == '__main__':
     # data = stock_all.get_data_on_date('002049.SZ','2010-01-14')
     # print(data)
     avg = Stock_all_model(db)
-    avg.get_datas('600089.SH','1997-08-18','2021-10-09')
+    avg.get_datas('600089.SH','2010-08-18','2021-10-09')
 
     # print( avg.cols )
     '''# ans = self.collect_data(in_code,start_dt,end_dt)
@@ -558,16 +573,16 @@ if __name__ == '__main__':
     #print( avg.get_avg_amplitude('2021-10-08'))
     rlist = []
     for i in range(len(avg.date_col)+30):
-        before = avg.date_col[i - 30 -1]
+
         item = avg.date_col[i - 30]
         # val = avg.get_avg_price_range(item,days=20)
         # rlist.append(val)
-        br = avg.get_balance(before,60, factor = 5)
-        r = avg.get_balance(item,60, factor = 5)
-        if r and br and r[1] < br[1] and br[1] > 60:
-            print(before, '________')
-            print(br)
-    # print(rlist)
+
+        r = avg.get_balance_days(item,60, factor = 5)
+
+        rlist.append(r)
+
+    print(rlist)
 
     resu = avg.get_price_moving_start('2021-10-08',factor = (20,10,5,3,2,1), wrong_time = 1)
 
@@ -597,9 +612,9 @@ if __name__ == '__main__':
 
     print(passageway_list)
 
-    biasRangeList = avg.get_bias_from_avg_line('2021-10-08',[60])
-    print(biasRangeList)
+    biasRangeList = avg.get_bias_from_avg_line('2021-10-08',[60,20,10,5])
+    print('biasRangeList______',biasRangeList)
 
-    r = avg.get_balance('2021-10-08',60, factor = 5)
+    r = avg.get_balance_days('2021-10-08',60, factor = 5)
 
     print(r)
