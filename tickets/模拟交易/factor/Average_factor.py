@@ -30,7 +30,7 @@ class Average_factor(Factor):
 
     # 风险偏好 分为几个等级 0 正常， -1 谨慎 1 激进
     risk_appetite = 0
-    # 购买权重构成
+    # 购买权重构成，用来构成买入百分比概率，所有相加应该等于1，也就是百分之百
     buy_weight = {
         "shortMovingRange": 0.05,
         "longMovingRange": 0.05,
