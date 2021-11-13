@@ -363,11 +363,9 @@ class Stock_all_model(Base_model):
     # 例如当前为下跌趋势那么取到趋势开始的那天
     # factor tuple 因子， 从因子的第一个开始取平均涨跌幅，如果更dt 趋势一致（上涨或下跌）则继续往前取前一天，直到取到连续出现wrongtime次数的不同趋势，则跳到factor下一个元素继续上述操作
     # wrong_time int 从当前时间往前倒推出现相反趋势的连续次数，当连续出现该次数后则跳转到因子的下一个索引继续，
-    # days int  从单前时间取该参数交易日平均日涨跌幅，如果该涨跌幅大于0则认为该趋势为上涨，则函数会从上涨去倒推交易日，执行factor参数第一个索引的平均涨跌幅
-    # 如果上一个交易日也为正则再往前推一天重付该动作，直到出现相反的平均涨跌幅则会记错加一，直到因子每个索引循环结束，则返回该交易日
     # return str 趋势出现的第一个交易日
-    def get_price_moving_start( self, dt , factor = (60,50,40,30,20,10,5,3), wrong_time = 2, days=30):
-        current = self.get_avg_price_range(dt,factor[0],days)
+    def get_price_moving_start( self, dt , factor = (60,50,40,30,20,10,5,3), wrong_time = 2):
+        current = self.get_avg_price_range(dt,factor[0])
         # print('current is %s'%current)
         # 上涨或者下跌
         features = 1 if float(current) > 0 else -1
