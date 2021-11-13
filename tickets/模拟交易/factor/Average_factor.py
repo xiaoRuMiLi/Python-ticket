@@ -2,7 +2,7 @@
 # @Author: Marte
 # @Date:   2021-10-30 22:23:55
 # @Last Modified by:   Marte
-# @Last Modified time: 2021-11-11 21:10:32
+# @Last Modified time: 2021-11-12 23:02:37
 import sys
 sys.path.append('..')
 from model.Stock_all_model import Stock_all_model
@@ -32,25 +32,25 @@ class Average_factor(Factor):
     risk_appetite = 0
     # 购买权重构成
     buy_weight = {
-        "shortMovingRange": 0.05,
-        "longMovingRange": 0.05,
-        'middleMovingRange': 0.05,
-        "5AverageBias": 0.15,
+        "shortMovingRange": 0.1,
+        "longMovingRange": 0.1,
+        'middleMovingRange': 0.2,
+        "5AverageBias": 0.1,
         "inPassageway": 0.05,
         "amplitude": 0.1,
         "priceRange": 0.05,
-        "isPutOn": 0.5
+        "isPutOn": 0.3
     }
     # 卖出权重构成
     sell_weight = {
-        "shortMovingRange": 0.05,
-        "longMovingRange": 0.05,
-        'middleMovingRange': 0.05,
-        "5AverageBias": 0.15,
+        "shortMovingRange": 0.2,
+        "longMovingRange": 0.1,
+        'middleMovingRange': 0.1,
+        "5AverageBias": 0.1,
         "inPassageway": 0.05,
         "amplitude": 0.1,
         "priceRange": 0.05,
-        "isPutOn": 0.5
+        "isPutOn": 0.3
     }
     def __init__( self ):
         super().__init__()
@@ -76,21 +76,18 @@ class Average_factor(Factor):
         avg_num = 60
         # 用来判断横盘的涨跌幅区间百分之
         price_range = 5
-        # 这个变量影响当前时间倒推到前该天数交易日平均的价格涨跌幅，如果该值为7 就是最近一周平均涨跌幅，
-        # 而该数值为大于那get_price_moving_start函数则会认为该值为上涨从而从当前时间倒推到上涨趋势开始的那一天
-        days = 30
 
         if typ == "MIDDLE":
-            factor = (20,10,5,3,2,1)
-            avg_num = 20
+            factor = (30,20,10,5,3,2,1)
+            avg_num = 30
             price_range = 5
         if typ == "SHORT":
-            factor = (10,9,8,7,6,5,3,2,1)
+            factor = (7,6,5,3,2,1)
             avg_num = 10
             price_range = 3
         if typ == "LONG":
-            factor = (60,50,40,30,20,10,5,3,2,1)
-            avg_num = 60
+            factor = (90,60,50,40,30,20,10,5,3,2,1)
+            avg_num = 90
             price_range = 10
         #横盘天数
         balance_days = self.get_balance_days(dt,avg_num,price_range)
@@ -136,10 +133,10 @@ class Average_factor(Factor):
         bias = o.get_bias_from_avg_line(dt,days=(60,20,10,5))
         # 取股价通道以短期期趋势持续天数作为基准
         passageway = o.get_avg_passageway(dt,sdays,1)[0]
-        # 股价中期振幅平均值，任然以中期为基准
-        amplitude = o.get_avg_amplitude(dt,mdays)
-        # 股价平均涨跌幅， 以中期趋势为基准
-        price_range = o.get_avg_price_range(dt,mdays)
+        # 股价短期振幅平均值，任然以短期为基准
+        amplitude = o.get_avg_amplitude(dt,sdays)
+        # 股价平均涨跌幅， 以短期趋势为基准
+        price_range = o.get_avg_price_range(dt,sdays)
         # 短期均线是否上穿长期均线
         is_put_on = o.is_put_on(dt,1,60)
 
@@ -150,7 +147,7 @@ class Average_factor(Factor):
         "longMovingRange": ltuple[0] >= 0, # 长期趋势平行或向上
         "5AverageBias": float(bias[3]) >=0,# 5日均线上运行
         "inPassageway": close < float(passageway[0]) and close > float(passageway[1]), # 股价在中期趋势通道运行
-        "amplitude": amplitude < 3, # 股价中期平均振幅为小振幅
+        "amplitude": amplitude < 4, # 股价中期平均振幅为小振幅
         "priceRange": price_range > 0, # 股价短期平均涨幅为正，意思是上涨
         "isPutOn": is_put_on > 0 # 股价于当日上穿60天均线
         }
@@ -187,17 +184,17 @@ class Average_factor(Factor):
         bias = o.get_bias_from_avg_line(dt,days=(60,20,10,5))
         # 取股价通道以短期期趋势持续天数作为基准
         passageway = o.get_avg_passageway(dt,sdays,1)[0]
-        # 股价中期振幅平均值，任然以中期为基准
-        amplitude = o.get_avg_amplitude(dt,mdays)
-        # 股价平均涨跌幅， 以中期趋势为基准
+        # 股价短期振幅平均值，任然以短期为基准
+        amplitude = o.get_avg_amplitude(dt,sdays)
+        # 股价平均涨跌幅， 以短期趋势为基准
         price_range = o.get_avg_price_range(dt,sdays)
 
         is_put_on = o.is_put_on(dt,1,60)
         if float(bias[0]) > 10:
-            # # 如果和60天均线乖离率大于20%  ，那么下穿20天均线反馈卖出指标
+            # # 如果和60天均线乖离率大于10%  ，那么下穿20天均线反馈卖出指标
             is_put_on = o.is_put_on(dt,1,20)
 
-            if float(bias[1]) > 5:
+            if float(bias[1]) > 20:
                 # # 如果和20天均线乖离率大于20%  ，那么下穿10天均线反馈卖出指标
                 is_put_on = o.is_put_on(dt,1,10)
         # 根据本数据和self。weight计算得到一个上涨概率百分比
