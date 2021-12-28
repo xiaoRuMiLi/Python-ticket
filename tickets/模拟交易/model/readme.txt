@@ -143,3 +143,10 @@ git stash pop #把修改还原
 
 在开源世界中，需用大量的程序员共同维护一个项目。也是需要使用分支，如Jquery。
 多人开发策略可以参考这个文章https://blog.csdn.net/wangliang888888/article/details/80536277
+
+
+一次提交多个文件的方法
+cd 到需要提交的文件夹中，执行git add .  注意是add空格加点符号。 这个是提交所有文件到暂存区，
+git commit -m 提交修改
+
+git push -u origin master 推送到远程仓库，有可能需要你输入账号和密码
