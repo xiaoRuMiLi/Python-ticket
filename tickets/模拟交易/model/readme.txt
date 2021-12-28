@@ -146,7 +146,10 @@ git stash pop #把修改还原
 
 
 一次提交多个文件的方法
-cd 到需要提交的文件夹中，执行git add .  注意是add空格加点符号。 这个是提交所有文件到暂存区，
-git commit -m 提交修改
+    cd 到需要提交的文件夹中，执行git add .  注意是add空格加点符号。 这个是提交所有文件到暂存区，
+    git commit -m 提交修改
+    git push -u origin master 推送到远程仓库，有可能需要你输入账号和密码
 
-git push -u origin master 推送到远程仓库，有可能需要你输入账号和密码
+
+1.git log退出方法
+    使用git log之后无法回到主页面,最后只能暴力关闭git bash. 解决方法其实很简单,输入字母Q即可退出.
