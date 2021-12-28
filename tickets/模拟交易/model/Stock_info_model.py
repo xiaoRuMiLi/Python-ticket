@@ -11,7 +11,7 @@ class Stock_info_model(Stock_all_model):
 
     # 从all库移交数据过来
     #
-    def get_stocks_form_stock_all( self, stock_pool: list )->bool:
+    def get_stocks_form_stock_all( self, stock_pool: list, start_dt = '1970-01-01',end_dt='2035-01-01' )->bool:
         self.empty()
         in_str = '('
         for x in range(len(stock_pool)):
@@ -20,8 +20,8 @@ class Stock_info_model(Stock_all_model):
             else:
                 in_str += str('\'') + str(stock_pool[x]) + str('\')')
         print( 'in_str is %s'%(in_str))
-        # 将stock_all 中包含股票池中数据拷贝到stock_info 中来
-        sql_insert = "insert into stock_info(select * from stock_all a where a.stock_code in %s)"%(in_str)
+        # 将stock_all 中包含股票池中数据拷贝到stock_info 中来，这个地方注意资源表中的字段如果含有拷贝表中么没有的字段则会报错，要选择性拷贝 指定字段可以(字段一，字段二)
+        sql_insert = "insert into stock_info (open, close,state_dt,stock_code,high,low,vol,amount,pre_close,amt_change,pct_change) select open, close,state_dt,stock_code,high,low,vol,amount,pre_close,amt_change,pct_change from stock_all a where a.stock_code in %s and state_dt between '%s' and '%s'"%(in_str,start_dt,end_dt)
         res = self.execute(sql_insert)
 
         return res

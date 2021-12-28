@@ -1,0 +1,5 @@
+host='127.0.0.1'
+user='stock'
+passwd='Aa780428'
+db='stock'
+charset='utf8'

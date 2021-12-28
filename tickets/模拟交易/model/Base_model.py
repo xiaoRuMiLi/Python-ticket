@@ -126,6 +126,36 @@ class Base_model(object):
             return res
         else:
             return False
+    # 多条记录
+    def update( self, set_dict, where):
+        where_text = ''
+        order_text = ''
+        if not self.table:
+            return False
+        # 判断类型
+        if isinstance(set_dict, dict) and set_dict:
+
+            set_text = ''
+            # dict.items()遍历字典列表 我们可以看到，返回了一个列表，列表中包含数个元组，每个元组中的内容对应的就是字典中的键值对。
+            # 那么我们遍历字典时，采用如下方式：
+            for key,value in  set_dict.items():
+                nval = self.format_val_to_query(value)
+                set_text = set_text + ' %s=%s ,'%(key,nval)
+            set_text = set_text[0:-1]
+            #print(set_text)
+        # 判断类型
+        if isinstance(where,dict) and where:
+
+            where_text = ''
+            # dict.items()遍历字典列表 我们可以看到，返回了一个列表，列表中包含数个元组，每个元组中的内容对应的就是字典中的键值对。
+            # 那么我们遍历字典时，采用如下方式：
+            for key,value in  where.items():
+                nval = self.format_val_to_query(value)
+                where_text = where_text + ' %s=%s and'%(key,nval)
+            where_text = where_text[0:-3]
+            # print(where_text)
+        query = "UPDATE %s SET %s WHERE %s"%( self.table, set_text, where_text )
+        return self.execute(query)
     def execute( self, query):
         res = True
         try:

@@ -2,7 +2,7 @@
 # @Author: Marte
 # @Date:   2021-10-30 22:23:55
 # @Last Modified by:   Marte
-# @Last Modified time: 2021-11-12 23:02:37
+# @Last Modified time: 2021-12-04 20:04:26
 import sys
 sys.path.append('..')
 from model.Stock_all_model import Stock_all_model
@@ -13,23 +13,6 @@ import pymysql
 from config import *
 class Average_factor(Factor):
 
-    # 短期涨跌幅
-    short_price_range = 0.00
-
-    # 长期股价涨跌幅
-    long_price_range = 0.00
-
-    # 最近横盘天数
-    balance_days = 0
-
-    # 股价短期振幅\
-    short_price_amplitude = 0
-
-    # 股价长期振幅
-    long_price_amplitude = 0
-
-    # 风险偏好 分为几个等级 0 正常， -1 谨慎 1 激进
-    risk_appetite = 0
     # 购买权重构成，用来构成买入百分比概率，所有相加应该等于1，也就是百分之百
     buy_weight = {
         "shortMovingRange": 0.1,
@@ -78,17 +61,17 @@ class Average_factor(Factor):
         price_range = 5
 
         if typ == "MIDDLE":
-            factor = (30,20,10,5,3,2,1)
-            avg_num = 30
-            price_range = 5
-        if typ == "SHORT":
-            factor = (7,6,5,3,2,1)
-            avg_num = 10
-            price_range = 3
-        if typ == "LONG":
-            factor = (90,60,50,40,30,20,10,5,3,2,1)
-            avg_num = 90
+            factor = (60,30,20,10,5,3,2,1)
+            avg_num = 60
             price_range = 10
+        if typ == "SHORT":
+            factor = (20,10,7,6,5,3,2,1)
+            avg_num = 20
+            price_range = 5
+        if typ == "LONG":
+            factor = (90,30,20,10,5,3,2,1)
+            avg_num = 90
+            price_range = 20
         #横盘天数
         balance_days = self.get_balance_days(dt,avg_num,price_range)
 
@@ -138,7 +121,15 @@ class Average_factor(Factor):
         # 股价平均涨跌幅， 以短期趋势为基准
         price_range = o.get_avg_price_range(dt,sdays)
         # 短期均线是否上穿长期均线
-        is_put_on = o.is_put_on(dt,1,60)
+        is_put_on = {"sixty": o.is_put_on(dt,1,60), "twenty": o.is_put_on(dt,1,20), "ten": o.is_put_on(dt,1,10)}
+        is_put_on_index = "sixty"
+        if float(bias[0]) > 10 or float(bias[0]) < 10:
+            # 如果和60天均线乖离率大于10%  ，那么上穿20天均线反馈买入指标
+            is_put_on_index = "twenty"
+
+            if float(bias[1]) > 10 or float(bias[1]) < 10:
+                # 如果和20天均线乖离率大于20%  ，那么上穿10天均线反馈买入指标
+                is_put_on_index = "ten"
 
         # 根据本数据和self。weight计算得到一个上涨概率百分比
         result = {
@@ -149,9 +140,10 @@ class Average_factor(Factor):
         "inPassageway": close < float(passageway[0]) and close > float(passageway[1]), # 股价在中期趋势通道运行
         "amplitude": amplitude < 4, # 股价中期平均振幅为小振幅
         "priceRange": price_range > 0, # 股价短期平均涨幅为正，意思是上涨
-        "isPutOn": is_put_on > 0 # 股价于当日上穿60天均线
+        "isPutOn": is_put_on[is_put_on_index] > 0 # 股价于当日上穿长期均线
         }
         data = {
+        "close": float(close),
         "shortMovingRange": stuple, #短期趋势向上
         'middleMovingRange': mtuple, # 中期趋势向上或者平行
         "longMovingRange": ltuple, # 长期趋势平行或向上
@@ -159,13 +151,14 @@ class Average_factor(Factor):
         "inPassageway": passageway, # 股价在中期趋势通道运行
         "amplitude": amplitude, # 股价中期平均振幅为小振幅
         "priceRange": price_range, # 股价短期平均涨幅为正，意思是上涨
-        "isPutOn": is_put_on # 股价于当日上穿60天均线
+        "isPutOn": is_put_on # 股价于当日上穿长期均线
         }
 
         r = self.calculation_probability(result,wei = self.buy_weight)
         # print(dt)
         # print( {"probability": r, "result": result, "data": data})
-        return {"probability": r, "result": result, "data": data}
+        return {"probability": '%.3f'%r, "result": result, "data": data}
+
     # 卖出指标
     def selling( self, dt):
         o = self.stomod
@@ -189,14 +182,15 @@ class Average_factor(Factor):
         # 股价平均涨跌幅， 以短期趋势为基准
         price_range = o.get_avg_price_range(dt,sdays)
 
-        is_put_on = o.is_put_on(dt,1,60)
+        is_put_on = {"sixty": o.is_put_on(dt,1,60), "twenty": o.is_put_on(dt,1,20), "ten": o.is_put_on(dt,1,10)}
+        is_put_on_index = "sixty"
         if float(bias[0]) > 10:
             # # 如果和60天均线乖离率大于10%  ，那么下穿20天均线反馈卖出指标
-            is_put_on = o.is_put_on(dt,1,20)
+            is_put_on_index = "twenty"
 
-            if float(bias[1]) > 20:
+            '''if float(bias[1]) > 20:
                 # # 如果和20天均线乖离率大于20%  ，那么下穿10天均线反馈卖出指标
-                is_put_on = o.is_put_on(dt,1,10)
+                is_put_on_index = "ten"'''
         # 根据本数据和self。weight计算得到一个上涨概率百分比
         result = {
         "shortMovingRange": stuple[0] < 0, #短期趋势向下
@@ -206,9 +200,10 @@ class Average_factor(Factor):
         "inPassageway": close < float(passageway[1]) , # 股价在短期趋势通道下运行
         "amplitude": amplitude > 3, # 股价中期平均振幅为大振幅
         "priceRange": price_range < 0, # 股价短期平均涨幅为负，意思是下跌
-        "isPutOn": is_put_on < 0 # 股价于当日下穿60天均线
+        "isPutOn": is_put_on[is_put_on_index] < 0 # 股价于当日下穿60天均线
         }
         data = {
+        "close": float(close),
         "shortMovingRange": stuple,
         'middleMovingRange': mtuple,
         "longMovingRange": ltuple,
@@ -221,7 +216,7 @@ class Average_factor(Factor):
 
         r = self.calculation_probability(result,wei = self.sell_weight)
         # print( {"probability": r, "result": result, "data": data})
-        return {"probability": r, "result": result, "data": data}
+        return {"probability": '%.3f'%r, "result": result, "data": data}
 
 
     def is_after_rising( self):

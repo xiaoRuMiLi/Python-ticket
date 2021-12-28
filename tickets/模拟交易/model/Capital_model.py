@@ -25,7 +25,7 @@ class Capital_model(Base_model):
     }
     table = 'my_capital'
     field = ['*']
-    def __init__( self, db , charge_rate=0.003):
+    def __init__( self, db , charge_rate=CAPITAL.charge_rate):
         super().__init__(db)
         self.charge_rate = charge_rate
         self.pool = Pool_model(db)
@@ -80,7 +80,7 @@ class Capital_model(Base_model):
         }
         res = self.insert_one(dic)
         if res:
-            print(str(stock),float(price),int(nvol))
+            # print(str(stock),float(price),int(nvol))
             self.pool.add_stock(str(stock),float(nprice),int(nvol))
             self.update_capital(date)
         return res
@@ -90,10 +90,10 @@ class Capital_model(Base_model):
         val = self.get_first({},'seq','desc')
         stock_pool = self.pool.get_first({'stock_code': stock})
         # 如果没有买入记录或库存记录则不会卖出
-        print('val',val)
-        print('stock_pool',stock_pool)
+        # print('val',val)
+        # print('stock_pool',stock_pool)
         if not val or not stock_pool:
-            print('this is do ')
+            # print('this is do ')
             return
         hold_vol = stock_pool[self.pool.field.index('hold_vol')]
         if int(hold_vol) <= 0 :

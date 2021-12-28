@@ -2,7 +2,7 @@
 # @Author: Marte
 # @Date:   2021-10-06 22:21:20
 # @Last Modified by:   Marte
-# @Last Modified time: 2021-11-12 23:29:52
+# @Last Modified time: 2021-12-08 19:45:35
 import datetime
 import tushare as ts
 import pymysql
@@ -40,7 +40,7 @@ class Imitation_transaction( object ):
     """
 
     # ->str 表示该函数的返回值是str类型的
-    def boot( self,stock ):
+    def boot( self,stock,start_dt,end_dt ):
 
         self.capital_model.empty()
         self.pool_model.empty()
@@ -48,18 +48,19 @@ class Imitation_transaction( object ):
 
         # 收集对应的行情数据到数据库
         self.tushare.collect_history_datas([stock])
-        self.stock_info_model.get_stocks_form_stock_all([stock])
+        self.stock_info_model.get_stocks_form_stock_all([stock],start_dt =start_dt,end_dt=end_dt)
         datas = self.stock_info_model.get_all({'stock_code': stock}, order_by = '"state_dt"')
+        print('datas',datas)
         self.stock_info_model.set_datas(datas)
-        print('self.stock_info_model.date_col:',self.stock_info_model.date_col)
+        # print('self.stock_info_model.date_col:',self.stock_info_model.date_col)
         dates = self.stock_info_model.date_col
         # 创建一个策略模型
         trend = Trend()
 
         # 注册模型和注册因子
         trend.registe({stock: self.stock_info_model},[(Average_factor,100)])
-        for i in range(len(dates)-60):
-
+        it = iter(range(len(dates[0:-60])))
+        for i in it:
             date = dates[i+60]
             item = datas[i+60]
             # 经过策略预测的结果集
@@ -85,15 +86,42 @@ class Imitation_transaction( object ):
                         continue
                     self.capital_model.sell_stock( stock, price, 100000, date)
 
+    def get_ai( self, stock , start_dt , end_dt ):
+
+        # 收集对应的行情数据到数据库
+        self.tushare.collect_history_datas([stock])
+        self.stock_info_model.get_stocks_form_stock_all([stock],start_dt =start_dt,end_dt=end_dt)
+        datas = self.stock_info_model.get_all({'stock_code': stock}, order_by = '"state_dt"')
+        print('datas',datas)
+        self.stock_info_model.set_datas(datas)
+        # print('self.stock_info_model.date_col:',self.stock_info_model.date_col)
+        dates = self.stock_info_model.date_col
+        # 创建一个策略模型
+        trend = Trend()
+
+        # 注册模型和注册因子
+        trend.registe({stock: self.stock_info_model},[(Average_factor,100)])
+        it = iter(range(len(dates[0:-60])))
+        for i in it:
+            date = dates[i+60]
+            item = datas[i+60]
+            # 经过策略预测的结果集
+            res = trend.ai(date)
+            print( res )
+
+
+
     # 模拟复盘
     def imitation( self, stock_all: Stock_all_model ):
         pass
 
 
 
+
 if __name__ == '__main__':
 
     db = pymysql.connect(host=MYSQL.host, user=MYSQL.user, passwd=MYSQL.passwd, db=MYSQL.db, charset=MYSQL.charset)
-    sel = Imitation_transaction( Stock_all_model(db), Tushare_request(db), Stocks_model(db), Capital_model(db) ,Stock_info_model(db), Pool_model(db))
-    sel.boot('601857.SH')
+    sel = Imitation_transaction( Stock_all_model(db), Tushare_request(db), Stocks_model(db), Capital_model(db,charge_rate=CAPITAL.charge_rate) ,Stock_info_model(db), Pool_model(db))
+    #sel.boot('601318.SH','2018-05-16','2025-01-01')
+    sel.get_ai('601318.SH','2018-05-16','2025-01-01')
     Stock_all_model(db).close_db()

@@ -296,7 +296,7 @@ class Stock_all_model(Base_model):
     # 根据股票走势数据寻找符合条件的波，一个完整的波包括一个上升浪和一个下降浪，上升浪累计涨幅大于下跌浪累计跌幅计做上涨波，反之则计做下跌波
     # (datas: 方法get_all_price_moving 返回的趋势数据，数据中包含了若干上升浪和下跌浪，
     # days：into  例子 5 表示波中上涨浪和下跌浪连续天数都不得小于5天,数值越大表示上升或者下降时间越长
-    # price_total:into 例如 10 表示上升浪和下跌浪累计涨跌幅都要大于10%,
+    # price_total:into 例如 10 然后参数trend 为1 的话 表示寻找上升浪涨幅超过10%下跌浪小于上升浪的上涨波,
     # trend: 1，RAISE or  -1FALL 0 all) 1 返回上升波， -1 返回下跌波
     # return {
     # 'type': int  1 代表是一个上涨波， -1 代表下降波,
@@ -557,7 +557,7 @@ if __name__ == '__main__':
     # data = stock_all.get_data_on_date('002049.SZ','2010-01-14')
     # print(data)
     avg = Stock_all_model(db)
-    avg.get_datas('600089.SH','2010-08-18','2021-10-09')
+    avg.get_datas('002430.SZ','2010-08-18','2021-11-09')
 
     # print( avg.cols )
     '''# ans = self.collect_data(in_code,start_dt,end_dt)
@@ -569,7 +569,7 @@ if __name__ == '__main__':
     print(avg.get_data_on_date('002051.SZ','2016-04-20'))'''
 
     #print( avg.get_avg_amplitude('2021-10-08'))
-    rlist = []
+    '''rlist = []
     for i in range(len(avg.date_col)+30):
 
         item = avg.date_col[i - 30]
@@ -594,16 +594,16 @@ if __name__ == '__main__':
     # print('days is %i'%len(rdays))
 
 
-    # print(avg.get_price_total('2021-10-08',650))
+    # print(avg.get_price_total('2021-10-08',650))'''
 
-    lis = avg.get_all_price_moving('2021-10-08')
+    lis = avg.get_all_price_moving('2021-10-08',factor = (20,10,5,3,2,1),wrong_time = 2)
     # print(lis)
     #
-    lis1 = avg.get_price_raise_wave(lis,days=5, price_total=5,trend=0)
+    lis1 = avg.get_price_raise_wave(lis,days=5, price_total=10,trend=0)
 
-    # print(lis1)
+    print(lis1)
 
-    avg_price_list = avg.get_avg_price('2021-10-08',5,30)
+    '''avg_price_list = avg.get_avg_price('2021-10-08',5,30)
     # print(avg_price_list)
 
     passageway_list = avg.get_avg_passageway('2021-10-08',5,10)
@@ -615,4 +615,4 @@ if __name__ == '__main__':
 
     r = avg.get_balance_days('2021-10-08',60, factor = 5)
 
-    print(r)
+    print(r)'''
